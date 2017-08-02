@@ -1,5 +1,5 @@
 var API_TOKEN = '399658678:AAEehzfDRL8Fa8AuRr0o-vcu-dX7x2q_Sr0';
-var USER_ID = "107924620";
+var USER_ID = "107657657";
 
 // @see https://goo.gl/c9JpnF - логгинг
 // @see https://goo.gl/Gq8m42 - веб-хук для бота и пример обработки команд
