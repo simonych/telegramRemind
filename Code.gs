@@ -1,4 +1,4 @@
-var API_TOKEN = '397777678:AAEehkjhalfjhqagfnqf;vcxh\pvbhq_Sr0';
+var API_TOKEN = '399658678:AAEehzfDRL8Fa8AuRr0o-vcu-dX7x2q_Sr0';
 var USER_ID = "107924620";
 
 // @see https://goo.gl/c9JpnF - логгинг
