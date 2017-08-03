@@ -3,7 +3,7 @@
 // @see https://tlgrm.ru/docs/bots/api#sendmessage - отправка сообщения боту
 
 function test() {
-  var chatId = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").getRange("CHAT_ID").getValue();
+  var chatId = getOption('CHAT_ID');
   
   putReminder("Напомни через одну минуту #1", chatId);
   //moveReminder(9, 15, chatId);
@@ -34,7 +34,7 @@ function doPost(e) {
   }
   
   // This is only for one user implementation
-  if (userId != SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").getRange("USER_ID").getValue()) {
+  if (userId != getOption('USER_ID')) {
     console.log({message: 'Запрещенный userId', value: userId});
     return;
   }
@@ -129,19 +129,19 @@ function putReminder(text, chatId) {
   var result = ParseDate(text);
   var remindDate = result.date;
   if (/^Напомни /i.test(remindText) && remindDate) {
-    var remind = ss.getSheetByName("settings").getRange("TEXT").getValue();
+    var remind = getOption('TEXT');
     if (remind) {
       remindText = remind;
     } else {
       remindText = remindText.replace(/^Напомни[\s\wа-яА-Я:]*\.\s*/, "").trim();
       if (!remindText) {
-        sendText(HtmlService.createTemplateFromFile('About').getRawContent().replace(/%date/g, Utilities.formatDate(remindDate, ss.getSheetByName("settings").getRange("TIME_ZONE").getValue(), 'dd/MM/yyyy HH:mm')).trim(), chatId);
-        ss.getSheetByName("settings").setActiveSelection('DATE').setValue(remindDate);
+        sendText(HtmlService.createTemplateFromFile('About').getRawContent().replace(/%date/g, Utilities.formatDate(remindDate, getOption('TIME_ZONE'), 'dd/MM/yyyy HH:mm')).trim(), chatId);
+        setOption('DATE', remindDate);
         return;
       }
     }
   } else if (/^:\s*/.test(remindText)) {
-    var date = ss.getSheetByName("settings").getRange("DATE").getValue();
+    var date = getOption('DATE');
     if (date) {
       remindDate = date;
     }
@@ -162,13 +162,13 @@ function putReminder(text, chatId) {
     sheet.setActiveSelection('C' + lastRow).setValue(remindText);
     sheet.setActiveSelection('D' + lastRow).setValue(result.title);     
     var template = HtmlService.createTemplateFromFile('Answer').getRawContent();
-    var message = template.replace(/%id/g, (lastRow-1)).replace(/%message/g, remindText).replace(/%date/g, Utilities.formatDate(remindDate, ss.getSheetByName("settings").getRange("TIME_ZONE").getValue(), 'dd/MM/yyyy HH:mm'));
+    var message = template.replace(/%id/g, (lastRow-1)).replace(/%message/g, remindText).replace(/%date/g, Utilities.formatDate(remindDate, getOption('TIME_ZONE'), 'dd/MM/yyyy HH:mm'));
     sendText(message, chatId);
-    ss.getSheetByName("settings").setActiveSelection('TEXT').setValue('');
-    ss.getSheetByName("settings").setActiveSelection('DATE').setValue('');
+    setOption('TEXT');
+    setOption('DATE');
   } else {
     sendText(HtmlService.createTemplateFromFile('When').getRawContent().replace(/%message/g, remindText), chatId);
-    ss.getSheetByName("settings").setActiveSelection('TEXT').setValue(remindText);
+    setOption('TEXT', remindText);
   }
 }
 
@@ -192,7 +192,7 @@ function moveReminder(id, minutes, chatId) {
   sheet.setActiveSelection('B' + row).setValue(curDate);
   
   var template = HtmlService.createTemplateFromFile('List').getRawContent();
-  var message = template.replace(/%id/g, id).replace(/%message/g, sheet.getRange('C' + row).getValue()).replace(/%date/g, Utilities.formatDate(curDate, ss.getSheetByName("settings").getRange("TIME_ZONE").getValue(), 'dd/MM/yyyy HH:mm'));
+  var message = template.replace(/%id/g, id).replace(/%message/g, sheet.getRange('C' + row).getValue()).replace(/%date/g, Utilities.formatDate(curDate, getOption('TIME_ZONE'), 'dd/MM/yyyy HH:mm'));
   
   sendText(Utilities.formatString('Переместил: %s ', message), chatId);
 }
@@ -215,7 +215,7 @@ function setReminder(id, date, chatId) {
   sheet.setActiveSelection('B' + row).setValue(date);
   
   var template = HtmlService.createTemplateFromFile('List').getRawContent();
-  var message = template.replace(/%id/g, id).replace(/%message/g, sheet.getRange('C' + row).getValue()).replace(/%date/g, Utilities.formatDate(date, ss.getSheetByName("settings").getRange("TIME_ZONE").getValue(), 'dd/MM/yyyy HH:mm'));
+  var message = template.replace(/%id/g, id).replace(/%message/g, sheet.getRange('C' + row).getValue()).replace(/%date/g, Utilities.formatDate(date, getOption('TIME_ZONE'), 'dd/MM/yyyy HH:mm'));
   
   sendText(Utilities.formatString('Установил: %s ', message), chatId);
 }
@@ -257,7 +257,7 @@ function deleteReminder(id, chatId) {
   sheet.setActiveSelection(cell).setValue(new Date());
   
   var template = HtmlService.createTemplateFromFile('List').getRawContent();
-  var message = template.replace(/%id/g, id).replace(/%message/g, sheet.getRange('C' + row).getValue()).replace(/%date/g, Utilities.formatDate(sheet.getRange('A' + row).getValue(), ss.getSheetByName("settings").getRange("TIME_ZONE").getValue(), 'dd/MM/yyyy HH:mm'));
+  var message = template.replace(/%id/g, id).replace(/%message/g, sheet.getRange('C' + row).getValue()).replace(/%date/g, Utilities.formatDate(sheet.getRange('A' + row).getValue(), getOption('TIME_ZONE'), 'dd/MM/yyyy HH:mm'));
   
   sendText(Utilities.formatString('Удалил: %s ', message), chatId);
 }
@@ -277,7 +277,7 @@ function listReminders(chatId) {
       id = i-1;
       
       var template = HtmlService.createTemplateFromFile('List').getRawContent();
-      var message = template.replace(/%id/g, id).replace(/%message/g, text).replace(/%date/g, Utilities.formatDate(nextDate, ss.getSheetByName("settings").getRange("TIME_ZONE").getValue(), 'dd/MM/yyyy HH:mm'));
+      var message = template.replace(/%id/g, id).replace(/%message/g, text).replace(/%date/g, Utilities.formatDate(nextDate, getOption('TIME_ZONE'), 'dd/MM/yyyy HH:mm'));
       
       var deleteButton = {
         text: 'Delete',
@@ -346,7 +346,7 @@ function remind() {
         keyboard.inline_keyboard.push([quarterButton, oneButton, twoButton]);
         keyboard.inline_keyboard.push([dayButton, weekButton, monthButton, yearButton]);
 
-        sendText(message, SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").getRange("CHAT_ID").getValue(), JSON.stringify(keyboard));
+        sendText(message, getOption('CHAT_ID'), JSON.stringify(keyboard));
         sheet.setActiveSelection('A' + i).setValue(new Date());
       } 
     }
@@ -365,5 +365,13 @@ function sendText(text, chatId, replyMarkup) {
       "method": "post",
       "payload": payload
     }    
-    UrlFetchApp.fetch('https://api.telegram.org/bot' + SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").getRange("API_TOKEN").getValue() + '/', data);
+    UrlFetchApp.fetch('https://api.telegram.org/bot' + getOption('API_TOKEN') + '/', data);
+}
+
+function getOption(name) {
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName('settings').getRange(name).getValue();
+}
+
+function setOption(name, value) {
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName('settings').setActiveSelection(name).setValue(value)
 }
