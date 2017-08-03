@@ -298,7 +298,7 @@ function listReminders(chatId) {
 
 function remind() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("reminders");
+  var sheet = ss.getSheetByName('reminders');
   var lastRow = sheet.getLastRow() + 1;
   var curDate = new Date();
   //console.log({message: 'remind', parameters: lastRow});
