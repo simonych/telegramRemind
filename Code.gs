@@ -1,20 +1,17 @@
-var API_TOKEN = '777777777:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-var USER_ID = "107924620";
-
 // @see https://goo.gl/c9JpnF - логгинг
 // @see https://goo.gl/Gq8m42 - веб-хук для бота и пример обработки команд
 // @see https://tlgrm.ru/docs/bots/api#sendmessage - отправка сообщения боту
 
 function test() {
-  var chatId = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").getRange("B3").getValue();
+  var chatId = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").getRange("CHAT_ID").getValue();
   
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B4').setValue("> 1"); putReminder("Напомни через одну минуту #1", chatId);
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B4').setValue("> 2"); putReminder("Напомни через две минуты #2", chatId);
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B4').setValue("> 3"); putReminder("Напомни через три минуты #3", chatId);
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B4').setValue("> 4"); putReminder("Напомни через четыре минуты #4", chatId);
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B4').setValue("> 5"); putReminder("Напомни через пять минут #5", chatId);
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B4').setValue("> 6"); putReminder("Напомни через шесть минут #6", chatId);
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B4').setValue("> 7"); putReminder("Напомни через семь минут #7", chatId);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('TEXT').setValue("> 1"); putReminder("Напомни через одну минуту #1", chatId);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('TEXT').setValue("> 2"); putReminder("Напомни через две минуты #2", chatId);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('TEXT').setValue("> 3"); putReminder("Напомни через три минуты #3", chatId);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('TEXT').setValue("> 4"); putReminder("Напомни через четыре минуты #4", chatId);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('TEXT').setValue("> 5"); putReminder("Напомни через пять минут #5", chatId);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('TEXT').setValue("> 6"); putReminder("Напомни через шесть минут #6", chatId);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('TEXT').setValue("> 7"); putReminder("Напомни через семь минут #7", chatId);
   //moveReminder(9, 15, chatId);
 }
 
@@ -28,91 +25,104 @@ function doPost(e) {
   var update = JSON.parse(e.postData.contents);
   console.log({message: 'doPost', parameters: update});
   
-  // Make sure this is update is a type message
+  // Получаю команду
+  var command = '';
   if (update.hasOwnProperty('message')) {
     var msg = update.message;
-    
-    var chatId = msg.chat.id; SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B3').setValue(chatId);
+    var chatId = msg.chat.id;
     var userId = msg.from.id;
-    if (userId != USER_ID) {
-      console.log({message: 'Запрещенный userId', value: userId});
-      return;
-    }
-
-    // Make sure the update is a command.
-    if (msg.hasOwnProperty('entities') && msg.entities[0].type == 'bot_command') {
-      if ('/help' == msg.text || '/start' == msg.text) {
-        var message = HtmlService.createTemplateFromFile('Commands').getRawContent();
-        sendText(message, chatId);
-      } else if ('/list' == msg.text) {
-        listReminders(chatId);
-      } else if (/\/delete/.test(msg.text)) {
-        deleteReminder(Number(msg.text.replace(/\/delete /g, '')), chatId);
-      } else if (/\/after/.test(msg.text)) {
-        var params = msg.text.match(/(\d+)/g);
-        if (!params) {
-          sendText("Ошибка переноса: не указаны параметры команды.", chatId);
-        }
-        moveReminder(Number(params[0]), Number(params[1]), chatId);
-      } else if (/\/at/.test(msg.text)) {
-        var text = msg.text;
-        var params = text.match(/(\d+)/);
-        if (!params) {
-          sendText("Ошибка установки: не указаны параметры.", chatId);
-        }
-        var id = params[0];
-        var stamp = text.replace("/at " + id + ' ', '');
-        var result = ParseDate(stamp);
-        setReminder(Number(id), result.date, chatId);
-      }
-    } else {
-      putReminder(msg.text, chatId);
-    }    
+    command = msg.text;
   } else if (update.hasOwnProperty('callback_query')) {
     var callback = update.callback_query;
-    
-    var chatId = callback.message.chat.id; SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B3').setValue(chatId);
+    var chatId = callback.message.chat.id;
     var userId = callback.from.id;
-    if (userId != USER_ID) {
-      console.log({message: 'Запрещенный userId', value: userId});
-      return;
-    }
+    command = update.callback_query.data;
+  }
+  
+  // This is only for one user implementation
+  if (userId != SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").getRange("USER_ID").getValue()) {
+    console.log({message: 'Запрещенный userId', value: userId});
+    return;
+  }
+  
+  // Получаю команду  
+  if (/start/i.test(command) || /help/i.test(command)) {
+    var message = HtmlService.createTemplateFromFile('Commands').getRawContent();
     
-    var query = callback.data;
-    if        (/\/delete/.test(query)) {
-      deleteReminder(Number(query.replace(/\/delete /g, '')), chatId);
-    } else if (/\/quarter/.test(query)) {
-      moveReminder(Number(query.replace(/\/quarter /g, '')), 15, chatId);
-    } else if (/\/one/.test(query)) {
-      moveReminder(Number(query.replace(/\/one /g, '')), 60, chatId);
-    } else if (/\/two/.test(query)) {
-      moveReminder(Number(query.replace(/\/two /g, '')), (2 * 60), chatId);
-    } else if (/\/day/.test(query)) {
-      var id = Number(query.replace(/\/day /g, ''));
-      var date = getReminder(id).date;
-      setReminder(id, new Date(date.getTime() + 60000 * (24 * 60)), chatId);      
-    } else if (/\/week/.test(query)) {
-      var id = Number(query.replace(/\/week /g, ''));
-      var date = getReminder(id).date;
-      setReminder(id, new Date(date.getTime() + 60000 * (24 * 60 * 7)), chatId);      
-    } else if (/\/month/.test(query)) {      
-      var id = Number(query.replace(/\/month /g, ''));
-      var date = getReminder(id).date;
-      var month = date.getMonth();
-      date.setMonth((month+1) % 12);
-      setReminder(id, date, chatId);
-    } else if (/\/year/.test(query)) {      
-      var id = Number(query.replace(/\/year /g, ''));
-      var date = getReminder(id).date;
-      var year = date.getYear();
-      date.setYear(year+1);
-      setReminder(id, date, chatId);
+    var helpButton = {
+      text: 'Help',
+      callback_data: '/help'
+    };
+    var listButton = {
+      text: 'List',
+      callback_data: '/list'
+    };
+    var examplesButton = {
+      text: 'Examples',
+      callback_data: '/examples'
+    };
+    var keyboard = {};
+    keyboard.resize_keyboard = true;
+    keyboard.one_time_keyboard = true;
+    keyboard.keyboard = [];
+    keyboard.keyboard.push([listButton, helpButton, examplesButton]);
+    
+    sendText(message, chatId, JSON.stringify(keyboard));
+  } else if (/list/i.test(command)) {
+    listReminders(chatId);
+  } else if (/examples/i.test(command)) {
+    sendText(HtmlService.createTemplateFromFile('Examples').getRawContent(), chatId);
+  } else if (/delete/i.test(command)) {
+    deleteReminder(Number(command.replace(/\/delete /g, '')), chatId);
+  } else if (/after/i.test(command)) {
+    var params = command.match(/(\d+)/g);
+    if (!params) {
+      sendText("Ошибка переноса: не указаны параметры команды.", chatId);
     }
+    moveReminder(Number(params[0]), Number(params[1]), chatId);
+  } else if (/at/i.test(command)) {
+    var text = command;
+    var params = text.match(/(\d+)/);
+    if (!params) {
+      sendText("Ошибка установки: не указаны параметры.", chatId);
+    }
+    var id = params[0];
+    var stamp = text.replace("/at " + id + ' ', '');
+    var result = ParseDate(stamp);
+    setReminder(Number(id), result.date, chatId);
+  } else if (/quarter/i.test(command)) {
+    moveReminder(Number(command.replace(/\/quarter /g, '')), 15, chatId);
+  } else if (/one/i.test(command)) {
+    moveReminder(Number(command.replace(/\/one /g, '')), 60, chatId);
+  } else if (/two/i.test(command)) {
+    moveReminder(Number(command.replace(/\/two /g, '')), (2 * 60), chatId);
+  } else if (/day/i.test(command)) {
+    var id = Number(command.replace(/\/day /g, ''));
+    var date = getReminder(id).date;
+    setReminder(id, new Date(date.getTime() + 60000 * (24 * 60)), chatId);      
+  } else if (/week/i.test(command)) {
+    var id = Number(command.replace(/\/week /g, ''));
+    var date = getReminder(id).date;
+    setReminder(id, new Date(date.getTime() + 60000 * (24 * 60 * 7)), chatId);      
+  } else if (/month/i.test(command)) {      
+    var id = Number(command.replace(/\/month /g, ''));
+    var date = getReminder(id).date;
+    var month = date.getMonth();
+    date.setMonth((month+1) % 12);
+    setReminder(id, date, chatId);
+  } else if (/year/i.test(command)) {      
+    var id = Number(command.replace(/\/year /g, ''));
+    var date = getReminder(id).date;
+    var year = date.getYear();
+    date.setYear(year+1);
+    setReminder(id, date, chatId);
+  } else {
+    putReminder(command, chatId);
   }
 }
 
 function putReminder(text, chatId) {
-  console.log('putReminder("%s", "%s")', text.trim(), chatId);
+  console.log('putReminder("%s", "%d")', text.trim(), chatId);
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("reminders");
   var lastRow = sheet.getLastRow() + 1;
@@ -125,19 +135,19 @@ function putReminder(text, chatId) {
   var result = ParseDate(text);
   var remindDate = result.date;
   if (/^Напомни /i.test(remindText) && remindDate) {
-    var remind = ss.getSheetByName("settings").getRange("B4").getValue();
+    var remind = ss.getSheetByName("settings").getRange("TEXT").getValue();
     if (remind) {
       remindText = remind;
     } else {
       remindText = remindText.replace(/^Напомни[\s\wа-яА-Я:]*\.\s*/, "").trim();
       if (!remindText) {
-        sendText(HtmlService.createTemplateFromFile('About').getRawContent().replace(/%date/g, Utilities.formatDate(remindDate, ss.getSheetByName("settings").getRange("B1").getValue(), 'dd/MM/yyyy HH:mm')).trim(), chatId);
-        ss.getSheetByName("settings").setActiveSelection('B5').setValue(remindDate);
+        sendText(HtmlService.createTemplateFromFile('About').getRawContent().replace(/%date/g, Utilities.formatDate(remindDate, ss.getSheetByName("settings").getRange("TIME_ZONE").getValue(), 'dd/MM/yyyy HH:mm')).trim(), chatId);
+        ss.getSheetByName("settings").setActiveSelection('DATE').setValue(remindDate);
         return;
       }
     }
   } else if (/^:\s*/.test(remindText)) {
-    var date = ss.getSheetByName("settings").getRange("B5").getValue();
+    var date = ss.getSheetByName("settings").getRange("DATE").getValue();
     if (date) {
       remindDate = date;
     }
@@ -158,13 +168,13 @@ function putReminder(text, chatId) {
     sheet.setActiveSelection('C' + lastRow).setValue(remindText);
     sheet.setActiveSelection('D' + lastRow).setValue(result.title);     
     var template = HtmlService.createTemplateFromFile('Answer').getRawContent();
-    var message = template.replace(/%id/g, (lastRow-1)).replace(/%message/g, remindText).replace(/%date/g, Utilities.formatDate(remindDate, ss.getSheetByName("settings").getRange("B1").getValue(), 'dd/MM/yyyy HH:mm'));
+    var message = template.replace(/%id/g, (lastRow-1)).replace(/%message/g, remindText).replace(/%date/g, Utilities.formatDate(remindDate, ss.getSheetByName("settings").getRange("TIME_ZONE").getValue(), 'dd/MM/yyyy HH:mm'));
     sendText(message, chatId);
-    ss.getSheetByName("settings").setActiveSelection('B4').setValue('');
-    ss.getSheetByName("settings").setActiveSelection('B5').setValue('');
+    ss.getSheetByName("settings").setActiveSelection('TEXT').setValue('');
+    ss.getSheetByName("settings").setActiveSelection('DATE').setValue('');
   } else {
     sendText(HtmlService.createTemplateFromFile('When').getRawContent().replace(/%message/g, remindText), chatId);
-    ss.getSheetByName("settings").setActiveSelection('B4').setValue(remindText);
+    ss.getSheetByName("settings").setActiveSelection('TEXT').setValue(remindText);
   }
 }
 
@@ -188,7 +198,7 @@ function moveReminder(id, minutes, chatId) {
   sheet.setActiveSelection('B' + row).setValue(curDate);
   
   var template = HtmlService.createTemplateFromFile('List').getRawContent();
-  var message = template.replace(/%id/g, id).replace(/%message/g, sheet.getRange('C' + row).getValue()).replace(/%date/g, Utilities.formatDate(curDate, ss.getSheetByName("settings").getRange("B1").getValue(), 'dd/MM/yyyy HH:mm'));
+  var message = template.replace(/%id/g, id).replace(/%message/g, sheet.getRange('C' + row).getValue()).replace(/%date/g, Utilities.formatDate(curDate, ss.getSheetByName("settings").getRange("TIME_ZONE").getValue(), 'dd/MM/yyyy HH:mm'));
   
   sendText(Utilities.formatString('Переместил: %s ', message), chatId);
 }
@@ -211,7 +221,7 @@ function setReminder(id, date, chatId) {
   sheet.setActiveSelection('B' + row).setValue(date);
   
   var template = HtmlService.createTemplateFromFile('List').getRawContent();
-  var message = template.replace(/%id/g, id).replace(/%message/g, sheet.getRange('C' + row).getValue()).replace(/%date/g, Utilities.formatDate(date, ss.getSheetByName("settings").getRange("B1").getValue(), 'dd/MM/yyyy HH:mm'));
+  var message = template.replace(/%id/g, id).replace(/%message/g, sheet.getRange('C' + row).getValue()).replace(/%date/g, Utilities.formatDate(date, ss.getSheetByName("settings").getRange("TIME_ZONE").getValue(), 'dd/MM/yyyy HH:mm'));
   
   sendText(Utilities.formatString('Установил: %s ', message), chatId);
 }
@@ -253,7 +263,7 @@ function deleteReminder(id, chatId) {
   sheet.setActiveSelection(cell).setValue(new Date());
   
   var template = HtmlService.createTemplateFromFile('List').getRawContent();
-  var message = template.replace(/%id/g, id).replace(/%message/g, sheet.getRange('C' + row).getValue()).replace(/%date/g, Utilities.formatDate(sheet.getRange('A' + row).getValue(), ss.getSheetByName("settings").getRange("B1").getValue(), 'dd/MM/yyyy HH:mm'));
+  var message = template.replace(/%id/g, id).replace(/%message/g, sheet.getRange('C' + row).getValue()).replace(/%date/g, Utilities.formatDate(sheet.getRange('A' + row).getValue(), ss.getSheetByName("settings").getRange("TIME_ZONE").getValue(), 'dd/MM/yyyy HH:mm'));
   
   sendText(Utilities.formatString('Удалил: %s ', message), chatId);
 }
@@ -273,17 +283,17 @@ function listReminders(chatId) {
       id = i-1;
       
       var template = HtmlService.createTemplateFromFile('List').getRawContent();
-      var message = template.replace(/%id/g, id).replace(/%message/g, text).replace(/%date/g, Utilities.formatDate(nextDate, ss.getSheetByName("settings").getRange("B1").getValue(), 'dd/MM/yyyy HH:mm'));
+      var message = template.replace(/%id/g, id).replace(/%message/g, text).replace(/%date/g, Utilities.formatDate(nextDate, ss.getSheetByName("settings").getRange("TIME_ZONE").getValue(), 'dd/MM/yyyy HH:mm'));
       
       var deleteButton = {
         text: 'Delete',
         callback_data: "/delete " + id
       };
-      var reply_markup = {};
-      reply_markup.inline_keyboard = [];
-      reply_markup.inline_keyboard.push([deleteButton]);
+      var keyboard = {};
+      keyboard.inline_keyboard = [];
+      keyboard.inline_keyboard.push([deleteButton]);
       
-      sendText(message, chatId, JSON.stringify(reply_markup));
+      sendText(message, chatId, JSON.stringify(keyboard));
       count++;
     }
   }
@@ -297,11 +307,12 @@ function remind() {
   var sheet = ss.getSheetByName("reminders");
   var lastRow = sheet.getLastRow() + 1;
   var curDate = new Date();
-  console.log({message: 'remind', parameters: lastRow});
+  //console.log({message: 'remind', parameters: lastRow});
   for(var i = 2, iLen = lastRow; i < iLen; i++) {
     var lastDate = sheet.getRange('A' + i).getValue();
     var nextDate = sheet.getRange('B' + i).getValue();
     var text = sheet.getRange('C' + i).getValue();
+    var chat = sheet.getRange('E' + i).getValue();
     if (!lastDate) {
       if (curDate >= nextDate) {
         var template = HtmlService.createTemplateFromFile('Reminder').getRawContent();
@@ -337,29 +348,29 @@ function remind() {
           text: 'год',
           callback_data: "/year " + id
         };
-        var reply_markup = {};
-        reply_markup.inline_keyboard = [];
-        reply_markup.inline_keyboard.push([quarterButton, oneButton, twoButton]);
-        reply_markup.inline_keyboard.push([dayButton, weekButton, monthButton, yearButton]);
+        var keyboard = {};
+        keyboard.inline_keyboard = [];
+        keyboard.inline_keyboard.push([quarterButton, oneButton, twoButton]);
+        keyboard.inline_keyboard.push([dayButton, weekButton, monthButton, yearButton]);
 
-        sendText(message, ss.getSheetByName("settings").getRange("B3").getValue(), JSON.stringify(reply_markup));
+        sendText(message, chat, JSON.stringify(keyboard));
         sheet.setActiveSelection('A' + i).setValue(new Date());
       } 
     }
   }
 }
 
-function sendText(text, chatId, keys) {
+function sendText(text, chatId, replyMarkup) {
     var payload = {
       'method': 'sendMessage',
       'chat_id': String(chatId),
       'text': text,
       'parse_mode': 'Markdown',
-      'reply_markup': keys
+      'reply_markup': replyMarkup
     }    
     var data = {
       "method": "post",
       "payload": payload
     }    
-    UrlFetchApp.fetch('https://api.telegram.org/bot' + API_TOKEN + '/', data);
+    UrlFetchApp.fetch('https://api.telegram.org/bot' + SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").getRange("API_TOKEN").getValue() + '/', data);
 }
