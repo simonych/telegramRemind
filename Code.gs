@@ -1,5 +1,5 @@
-var API_TOKEN = '399658678:AAEehzfDRL8Fa8AuRr0o-vcu-dX7x2q_Sr0';
-var USER_ID = "107657657";
+var API_TOKEN = '777777777:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+var USER_ID = "107924620";
 
 // @see https://goo.gl/c9JpnF - логгинг
 // @see https://goo.gl/Gq8m42 - веб-хук для бота и пример обработки команд
@@ -8,25 +8,14 @@ var USER_ID = "107657657";
 function test() {
   var chatId = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").getRange("B3").getValue();
   
-  //putReminder("Прраздник. Цветы. 23 августа в 17:55", chatId);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B4').setValue("> 1"); putReminder("Напомни через одну минуту #1", chatId);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B4').setValue("> 2"); putReminder("Напомни через две минуты #2", chatId);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B4').setValue("> 3"); putReminder("Напомни через три минуты #3", chatId);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B4').setValue("> 4"); putReminder("Напомни через четыре минуты #4", chatId);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B4').setValue("> 5"); putReminder("Напомни через пять минут #5", chatId);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B4').setValue("> 6"); putReminder("Напомни через шесть минут #6", chatId);
+  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B4').setValue("> 7"); putReminder("Напомни через семь минут #7", chatId);
   //moveReminder(9, 15, chatId);
-  
-  //var id = 9;
-  //var date = getReminder(id).date;
-  //var days = date.getDays();
-  //date.setDays((days+7) % 7);
-  //setReminder(id, date, chatId);
-  
-  var text = '/at 9 1231231';
-  var params = text.match(/(\d+)/);
-  if (!params) {
-    sendText("Ошибка установки: не указаны параметры.", chatId);
-  }
-  var id = params[0];
-  var stamp = text.replace("/at " + id + ' ', '');
-  var result = ParseDate(stamp);
-  setReminder(Number(id), result.date, chatId);
-  
 }
 
 function doGet(e) {
@@ -43,7 +32,7 @@ function doPost(e) {
   if (update.hasOwnProperty('message')) {
     var msg = update.message;
     
-    var chatId = msg.chat.id; SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B3').setValue(chatId);    
+    var chatId = msg.chat.id; SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('B3').setValue(chatId);
     var userId = msg.from.id;
     if (userId != USER_ID) {
       console.log({message: 'Запрещенный userId', value: userId});
@@ -123,31 +112,59 @@ function doPost(e) {
 }
 
 function putReminder(text, chatId) {
-  var result = ParseDate(text);
-  console.log({message: 'putReminder', value: result});
-  if (result.date) {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("reminders");
-    var lastRow = sheet.getLastRow() + 1;
+  console.log('putReminder("%s", "%s")', text.trim(), chatId);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("reminders");
+  var lastRow = sheet.getLastRow() + 1;
     
-    var remindDate = result.date;
+  if ("" == text.trim()) {
+    sendText("Не понял.", chatId);
+    return;
+  }
+  var remindText = text.trim();
+  var result = ParseDate(text);
+  var remindDate = result.date;
+  if (/^Напомни /i.test(remindText) && remindDate) {
+    var remind = ss.getSheetByName("settings").getRange("B4").getValue();
+    if (remind) {
+      remindText = remind;
+    } else {
+      remindText = remindText.replace(/^Напомни[\s\wа-яА-Я:]*\.\s*/, "").trim();
+      if (!remindText) {
+        sendText(HtmlService.createTemplateFromFile('About').getRawContent().replace(/%date/g, Utilities.formatDate(remindDate, ss.getSheetByName("settings").getRange("B1").getValue(), 'dd/MM/yyyy HH:mm')).trim(), chatId);
+        ss.getSheetByName("settings").setActiveSelection('B5').setValue(remindDate);
+        return;
+      }
+    }
+  } else if (/^:\s*/.test(remindText)) {
+    var date = ss.getSheetByName("settings").getRange("B5").getValue();
+    if (date) {
+      remindDate = date;
+    }
+    remindText = remindText.replace(/^-\s*/, "").trim();
+  }
+  if (remindDate) {
     if (result.sms) {
       var smsText = result.sms;
       var minutes = Number(smsText.match(/(\d+)/g)[0]);
       if (minutes) {
-        remindDate = new Date(remindDate.getTime() - 60000 * minutes);
+        var newDate = new Date(remindDate.getTime() - 60000 * minutes);
+        if (newDate > new Date()) {
+          remindDate = newDate;
+        }
       }
     }    
-    
     sheet.setActiveSelection('B' + lastRow).setValue(remindDate);
-    sheet.setActiveSelection('C' + lastRow).setValue(text);     
+    sheet.setActiveSelection('C' + lastRow).setValue(remindText);
     sheet.setActiveSelection('D' + lastRow).setValue(result.title);     
-    
     var template = HtmlService.createTemplateFromFile('Answer').getRawContent();
-    var message = template.replace(/%id/g, (lastRow-1)).replace(/%message/g, text).replace(/%date/g, Utilities.formatDate(remindDate, ss.getSheetByName("settings").getRange("B1").getValue(), 'dd/MM/yyyy HH:mm'));
+    var message = template.replace(/%id/g, (lastRow-1)).replace(/%message/g, remindText).replace(/%date/g, Utilities.formatDate(remindDate, ss.getSheetByName("settings").getRange("B1").getValue(), 'dd/MM/yyyy HH:mm'));
     sendText(message, chatId);
+    ss.getSheetByName("settings").setActiveSelection('B4').setValue('');
+    ss.getSheetByName("settings").setActiveSelection('B5').setValue('');
   } else {
-    sendText("Не понял.", chatId);
+    sendText(HtmlService.createTemplateFromFile('When').getRawContent().replace(/%message/g, remindText), chatId);
+    ss.getSheetByName("settings").setActiveSelection('B4').setValue(remindText);
   }
 }
 
