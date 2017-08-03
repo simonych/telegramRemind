@@ -5,13 +5,7 @@
 function test() {
   var chatId = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").getRange("CHAT_ID").getValue();
   
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('TEXT').setValue("> 1"); putReminder("Напомни через одну минуту #1", chatId);
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('TEXT').setValue("> 2"); putReminder("Напомни через две минуты #2", chatId);
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('TEXT').setValue("> 3"); putReminder("Напомни через три минуты #3", chatId);
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('TEXT').setValue("> 4"); putReminder("Напомни через четыре минуты #4", chatId);
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('TEXT').setValue("> 5"); putReminder("Напомни через пять минут #5", chatId);
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('TEXT').setValue("> 6"); putReminder("Напомни через шесть минут #6", chatId);
-  SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").setActiveSelection('TEXT').setValue("> 7"); putReminder("Напомни через семь минут #7", chatId);
+  putReminder("Напомни через одну минуту #1", chatId);
   //moveReminder(9, 15, chatId);
 }
 
@@ -312,7 +306,6 @@ function remind() {
     var lastDate = sheet.getRange('A' + i).getValue();
     var nextDate = sheet.getRange('B' + i).getValue();
     var text = sheet.getRange('C' + i).getValue();
-    var chat = sheet.getRange('E' + i).getValue();
     if (!lastDate) {
       if (curDate >= nextDate) {
         var template = HtmlService.createTemplateFromFile('Reminder').getRawContent();
@@ -353,7 +346,7 @@ function remind() {
         keyboard.inline_keyboard.push([quarterButton, oneButton, twoButton]);
         keyboard.inline_keyboard.push([dayButton, weekButton, monthButton, yearButton]);
 
-        sendText(message, chat, JSON.stringify(keyboard));
+        sendText(message, SpreadsheetApp.getActiveSpreadsheet().getSheetByName("settings").getRange("CHAT_ID").getValue(), JSON.stringify(keyboard));
         sheet.setActiveSelection('A' + i).setValue(new Date());
       } 
     }
