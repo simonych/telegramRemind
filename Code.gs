@@ -9,6 +9,18 @@ function test() {
   //moveReminder(9, 15, chatId);
 }
 
+function initialize() {
+  var data = {
+    "method": "post",
+    "payload": {
+      'url': getOption('URL')
+    }
+  }
+  var result = UrlFetchApp.fetch('https://api.telegram.org/bot' + getOption('API_TOKEN') + '/setWebhook', data);
+  console.log({'event': 'initialize', 'params': data, 'result': result});
+  sendText('Я живой!', getOption('CHAT_ID'));
+}
+
 function doGet(e) {
   if (e) {
     doPost(e);
@@ -24,25 +36,26 @@ function doPost(e) {
   if (update.hasOwnProperty('message')) {
     var msg = update.message;
     var chatId = msg.chat.id;
-    var userId = msg.from.id;
     command = msg.text;
   } else if (update.hasOwnProperty('callback_query')) {
-    var callback = update.callback_query;
-    var chatId = callback.message.chat.id;
-    var userId = callback.from.id;
+    var msg = update.callback_query;
+    var chatId = msg.message.chat.id;
     command = update.callback_query.data;
   }
+  var userId = msg.from.id;
+  var userName = msg.from.username;
   
   // This is only for one user implementation
   if (userId != getOption('USER_ID')) {
+    sendText(HtmlService.createTemplateFromFile('Alert').getRawContent().replace('%username', userName).replace('%id', userName), getOption('CHAT_ID'));
+    sendText(HtmlService.createTemplateFromFile('Privacy').getRawContent().replace('%username', userName), chatId);
     console.log({message: 'Запрещенный userId', value: userId});
     return;
   }
   
-  // Получаю команду  
+  // Обрабатываю команду  
   if (/start/i.test(command) || /help/i.test(command)) {
-    var message = HtmlService.createTemplateFromFile('Commands').getRawContent();
-    
+    var message = HtmlService.createTemplateFromFile('Commands').getRawContent();    
     var helpButton = {
       text: 'Help',
       callback_data: '/help'
@@ -59,8 +72,7 @@ function doPost(e) {
     keyboard.resize_keyboard = true;
     keyboard.one_time_keyboard = true;
     keyboard.keyboard = [];
-    keyboard.keyboard.push([listButton, helpButton, examplesButton]);
-    
+    keyboard.keyboard.push([listButton, helpButton, examplesButton]);    
     sendText(message, chatId, JSON.stringify(keyboard));
   } else if (/list/i.test(command)) {
     listReminders(chatId);
@@ -309,10 +321,8 @@ function remind() {
     if (!lastDate) {
       if (curDate >= nextDate) {
         var template = HtmlService.createTemplateFromFile('Reminder').getRawContent();
-        var message = template.replace(/%message/g, text);
-        
-        id = i - 1; 
-         
+        var message = template.replace(/%message/g, text);        
+        id = i - 1;         
         var quarterButton = {
           text: 'четверть часа',
           callback_data: "/quarter " + id
@@ -345,7 +355,6 @@ function remind() {
         keyboard.inline_keyboard = [];
         keyboard.inline_keyboard.push([quarterButton, oneButton, twoButton]);
         keyboard.inline_keyboard.push([dayButton, weekButton, monthButton, yearButton]);
-
         sendText(message, getOption('CHAT_ID'), JSON.stringify(keyboard));
         sheet.setActiveSelection('A' + i).setValue(new Date());
       } 
@@ -354,18 +363,17 @@ function remind() {
 }
 
 function sendText(text, chatId, replyMarkup) {
-    var payload = {
+  var data = {
+    "method": "post",
+    "payload": {
       'method': 'sendMessage',
       'chat_id': String(chatId),
       'text': text,
       'parse_mode': 'Markdown',
       'reply_markup': replyMarkup
-    }    
-    var data = {
-      "method": "post",
-      "payload": payload
-    }    
-    UrlFetchApp.fetch('https://api.telegram.org/bot' + getOption('API_TOKEN') + '/', data);
+    }
+  }    
+  UrlFetchApp.fetch('https://api.telegram.org/bot' + getOption('API_TOKEN') + '/', data);
 }
 
 function getOption(name) {
@@ -373,5 +381,8 @@ function getOption(name) {
 }
 
 function setOption(name, value) {
+  if (!value) {
+    value = '';
+  }  
   SpreadsheetApp.getActiveSpreadsheet().getSheetByName('settings').setActiveSelection(name).setValue(value)
 }
